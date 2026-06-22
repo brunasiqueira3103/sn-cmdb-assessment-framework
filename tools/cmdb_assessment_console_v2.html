@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CMDB Baseline — Assessment Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:wght@400;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f3efe6; --paper-2:#ece7da; --ink:#1c1b18; --ink-soft:#4a463d;
+    --line:#cdc6b5; --line-strong:#1c1b18;
+    --accent:#b3431f;           /* signal orange-red */
+    --pass:#2f7d4f; --pass-bg:#e3efe6;
+    --warn:#b8842a; --warn-bg:#f3eada;
+    --fail:#a83232; --fail-bg:#f3e0de;
+    --mono:'IBM Plex Mono',ui-monospace,"SF Mono","Cascadia Code","JetBrains Mono",Menlo,Consolas,monospace;
+    --disp:'Chivo',"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--mono);
+    font-size:14px; line-height:1.5;
+    background-image:radial-gradient(rgba(28,27,24,.025) 1px,transparent 1px);
+    background-size:4px 4px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 24px 80px}
+  h1,h2,h3{font-family:var(--disp);font-weight:900;letter-spacing:-.01em;margin:0}
+  .mono{font-family:var(--mono)}
+  .up{text-transform:uppercase;letter-spacing:.14em;font-size:11px;color:var(--ink-soft);font-weight:600}
+
+  /* header */
+  header.top{border-bottom:3px solid var(--line-strong);padding-bottom:18px;margin-bottom:22px}
+  header.top .brandrow{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap}
+  header.top h1{font-size:30px;line-height:.98}
+  header.top h1 .sub{display:block;font-size:13px;font-weight:400;font-family:var(--mono);color:var(--ink-soft);letter-spacing:0;margin-top:8px}
+  .rule-band{margin-top:16px;display:flex;gap:0;border:1px solid var(--line-strong);font-size:11.5px;flex-wrap:wrap}
+  .rule-band div{padding:7px 12px;flex:1;min-width:180px;border-right:1px solid var(--line)}
+  .rule-band div:last-child{border-right:0}
+  .rule-band b{font-weight:700}
+  .tag-fail{color:var(--fail)} .tag-warn{color:var(--warn)} .tag-pass{color:var(--pass)}
+
+  /* input */
+  .panel{border:1px solid var(--line-strong);background:var(--paper-2);margin-bottom:24px}
+  .panel-h{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line-strong);background:var(--ink);color:var(--paper)}
+  .panel-h .up{color:#cfc9bb}
+  .panel-b{padding:16px}
+  textarea{width:100%;min-height:150px;resize:vertical;font-family:var(--mono);font-size:12.5px;
+    border:1px solid var(--line);background:#fcfaf4;color:var(--ink);padding:12px;line-height:1.45}
+  textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .io-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .io-grid .lbl{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  button{font-family:var(--mono);font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid var(--line-strong);
+    background:var(--paper);color:var(--ink);padding:9px 16px;letter-spacing:.04em;transition:all .12s}
+  button:hover{background:var(--ink);color:var(--paper)}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  button.primary:hover{background:#8f3416}
+  button.ghost{background:transparent}
+  .hint{font-size:11px;color:var(--ink-soft)}
+
+  /* results hidden until parse */
+  #results{display:none}
+
+  /* verdict gate */
+  .gate{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:0;border:3px solid var(--line-strong);margin-bottom:26px}
+  .gate>div{padding:20px 22px;border-right:1px solid var(--line-strong)}
+  .gate>div:last-child{border-right:0}
+  .gate .verdict-big{font-family:var(--disp);font-weight:900;font-size:40px;line-height:.92;margin-top:6px}
+  .gate .verdict-sub{font-size:12px;color:var(--ink-soft);margin-top:10px}
+  .v-go{color:var(--pass)} .v-restr{color:var(--warn)} .v-nogo{color:var(--fail)}
+  .gate-cell-fill-go{background:var(--pass-bg)} .gate-cell-fill-restr{background:var(--warn-bg)} .gate-cell-fill-nogo{background:var(--fail-bg)}
+  .metric-num{font-family:var(--disp);font-weight:900;font-size:46px;line-height:.9}
+  .metric-num small{font-size:18px;font-weight:700}
+  .gauge{position:relative;height:10px;background:var(--line);margin-top:14px;border:1px solid var(--line-strong)}
+  .gauge>span{position:absolute;left:0;top:0;bottom:0;background:var(--ink)}
+  .mat-dots{display:flex;gap:5px;margin-top:14px}
+  .mat-dots i{width:26px;height:14px;border:1px solid var(--line-strong);background:var(--paper);display:block}
+  .mat-dots i.on{background:var(--accent)}
+
+  /* section heading */
+  .sec{margin:34px 0 14px;display:flex;align-items:baseline;gap:14px;border-bottom:1px solid var(--line-strong);padding-bottom:8px}
+  .sec h2{font-size:19px}
+  .sec .idx{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600}
+
+  /* domain cards */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:0;border:1px solid var(--line-strong);border-right:0;border-bottom:0}
+  .card{border-right:1px solid var(--line-strong);border-bottom:1px solid var(--line-strong);padding:14px}
+  .card .ch{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .card .cname{font-family:var(--disp);font-weight:700;font-size:15px}
+  .badge{font-size:10.5px;font-weight:700;padding:3px 8px;border:1px solid;letter-spacing:.08em}
+  .b-pass{color:var(--pass);border-color:var(--pass);background:var(--pass-bg)}
+  .b-warn{color:var(--warn);border-color:var(--warn);background:var(--warn-bg)}
+  .b-fail{color:var(--fail);border-color:var(--fail);background:var(--fail-bg)}
+  .card .crit{font-size:10.5px;color:var(--ink-soft);margin-top:8px}
+  .card .crit b{color:var(--ink)}
+  .card .cmetric{font-family:var(--disp);font-weight:900;font-size:24px;margin-top:8px;line-height:1}
+  .card .cmetric small{font-size:11px;font-family:var(--mono);font-weight:500;color:var(--ink-soft)}
+  .card .cread{font-size:11.5px;color:var(--ink-soft);margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+  .card .delta{font-size:11px;font-weight:700;margin-top:6px}
+
+  /* generic tables */
+  table.dt{width:100%;border-collapse:collapse;border:1px solid var(--line-strong);font-size:12.5px}
+  table.dt th{background:var(--ink);color:var(--paper);text-align:left;padding:8px 11px;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+  table.dt td{padding:8px 11px;border-top:1px solid var(--line);vertical-align:top}
+  table.dt tr:nth-child(even) td{background:rgba(28,27,24,.022)}
+  td .pill{font-weight:700;font-size:11px}
+
+  /* two-col layout for mini viz */
+  .viz-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:820px){.viz-grid,.io-grid{grid-template-columns:1fr}.gate{grid-template-columns:1fr}}
+  .viz-card{border:1px solid var(--line-strong);padding:16px}
+  .viz-card h3{font-size:13px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;font-size:12px}
+  .bar-row .bl{width:90px;flex:none}
+  .bar-row .bt{flex:1;height:16px;background:var(--paper-2);border:1px solid var(--line);position:relative}
+  .bar-row .bt>span{position:absolute;left:0;top:0;bottom:0}
+  .bar-row .bv{width:38px;text-align:right;font-weight:700}
+  .fill-alive{background:var(--pass)} .fill-dead{background:var(--warn)} .fill-dang{background:var(--fail)}
+  .fill-indet{background:#9a9382}
+  .donut-wrap{display:flex;align-items:center;gap:18px}
+  .legend{font-size:12px}
+  .legend div{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .legend i{width:11px;height:11px;display:block;border:1px solid var(--line-strong)}
+  ul.tight{margin:8px 0 0;padding-left:18px;font-size:11.5px;color:var(--ink-soft)}
+  ul.tight li{margin-bottom:3px}
+
+  /* editable effort cells */
+  td.edit{cursor:text;background:#fcfaf4}
+  td.edit:focus{outline:2px solid var(--accent);outline-offset:-2px;background:#fff}
+
+  /* evidence log */
+  .evi{border:1px solid var(--line-strong)}
+  .evi-grp{border-bottom:1px solid var(--line)}
+  .evi-grp:last-child{border-bottom:0}
+  .evi-h{display:flex;justify-content:space-between;align-items:center;padding:9px 14px;cursor:pointer;background:var(--paper-2);user-select:none}
+  .evi-h:hover{background:#e3ddcd}
+  .evi-h .en{font-family:var(--disp);font-weight:700;font-size:13px}
+  .evi-body{display:none;padding:6px 14px 12px;background:#fcfaf4;font-size:11.5px}
+  .evi-body.open{display:block}
+  .logline{padding:2px 0;border-bottom:1px dotted var(--line);white-space:pre-wrap;word-break:break-word}
+  .logline .lv{font-weight:700;margin-right:8px}
+  .lv-INFO{color:var(--ink-soft)} .lv-WARN{color:var(--warn)} .lv-FAIL{color:var(--fail)}
+
+  /* config */
+  details.cfg{margin-bottom:24px;border:1px dashed var(--line-strong)}
+  details.cfg summary{padding:9px 14px;cursor:pointer;font-weight:600;font-size:12px;letter-spacing:.05em;background:var(--paper-2)}
+  details.cfg .cfg-b{padding:14px}
+  .cfg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+  .cfg-grid label{display:block;font-size:11px;color:var(--ink-soft)}
+  .cfg-grid input{width:100%;font-family:var(--mono);border:1px solid var(--line);padding:5px 7px;font-size:12px;margin-top:3px}
+
+  footer{margin-top:50px;border-top:1px solid var(--line);padding-top:16px;font-size:11px;color:var(--ink-soft)}
+  .empty{padding:40px;text-align:center;color:var(--ink-soft);border:1px dashed var(--line-strong)}
+
+  /* cabeçalho que só aparece na impressão/PDF */
+  .print-only{display:none}
+
+  @media print{
+    @page{ margin:14mm 12mm; }
+    *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    html,body{ background:#fff !important; background-image:none !important; font-size:11px; }
+    .panel,.btns,details.cfg,.no-print,header.top .up{ display:none !important; }
+    .evi-body{ display:block !important; }
+    .wrap{ max-width:none; padding:0; margin:0; }
+    .print-only{ display:block; margin-bottom:14px; }
+    .print-only h1{ font-size:22px; }
+    .print-only .meta{ font-size:11px; color:#444; margin-top:4px; }
+    .sec{ break-inside:avoid; page-break-inside:avoid; margin-top:18px; }
+    .card,.bar-row,.viz-card,.evi-grp,tr{ break-inside:avoid; page-break-inside:avoid; }
+    table.dt{ page-break-inside:auto; }
+    table.dt thead{ display:table-header-group; }
+    .gate{ break-inside:avoid; }
+    .cards{ grid-template-columns:repeat(3,1fr); }
+    .viz-grid{ grid-template-columns:1fr 1fr; }
+    a[href]:after{ content:""; }   /* não imprimir URLs */
+    footer{ font-size:9px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brandrow">
+      <h1>CMDB Baseline<span class="sub">Assessment Console · leitura determinística do output do CMDBBaselineDiagnostic.runAll()</span></h1>
+      <div class="up" style="text-align:right">ITOM · Discovery · CMDB · CSDM<br>GO / NO-GO Gate</div>
+    </div>
+    <div class="rule-band">
+      <div><b class="tag-fail">FAIL</b> bloqueia evolução</div>
+      <div><b class="tag-warn">WARN</b> permite evolução com contenção</div>
+      <div><b class="tag-pass">PASS</b> pode seguir</div>
+    </div>
+  </header>
+
+  <!-- INPUT -->
+  <div class="panel">
+    <div class="panel-h"><span class="up">Entrada · log do assessment</span><span class="up" id="parseStatus">aguardando</span></div>
+    <div class="panel-b">
+      <div class="io-grid">
+        <div>
+          <div class="lbl"><span class="up">Execução base</span><span class="hint">cole o output completo (gs.info/warn/error)</span></div>
+          <textarea id="inA" placeholder="*** Script: [INFO] >>> DISCOVERY | PROBES (LEGADO)&#10;*** Script: [INFO] PASS: Nenhum Probe legado ativo.&#10;..."></textarea>
+        </div>
+        <div>
+          <div class="lbl"><span class="up">Execução comparativa <span style="opacity:.6">(opcional)</span></span><span class="hint">para diff antes→depois</span></div>
+          <textarea id="inB" placeholder="Cole aqui uma 2ª execução (ex: pós-remediação) para ver o delta por domínio."></textarea>
+        </div>
+      </div>
+      <div class="btns">
+        <button class="primary" onclick="run()">▸ Analisar</button>
+        <button class="ghost" onclick="loadSample()">Carregar exemplo</button>
+        <button class="ghost" onclick="clearAll()">Limpar</button>
+        <button class="ghost no-print" onclick="printReport()">⤓ PDF (imprimir)</button>
+        <button onclick="exportWord()">⤓ Word (.doc)</button>
+        <button onclick="exportExcel()">⤓ Excel (.xls)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONFIG -->
+  <details class="cfg">
+    <summary>⚙ Metodologia & pesos (ajustável por engajamento)</summary>
+    <div class="cfg-b">
+      <p class="hint" style="margin-top:0">Score ponderado = Σ(peso×ponto)/Σ(peso). Pontos: PASS=1 · WARN=0.5 · FAIL=0. Gate: qualquer FAIL → NO-GO · qualquer WARN → GO-RESTRITO · tudo PASS → GO. Maturidade = banda de score rebaixada por nº de deficiências estruturais.</p>
+      <div style="margin:4px 0 14px">
+        <label class="up" style="display:block;margin-bottom:5px">Modo de consolidação</label>
+        <select id="consoMode" style="width:100%;font-family:var(--mono);border:1px solid var(--line-strong);padding:7px 9px;font-size:12px;background:#fcfaf4;color:var(--ink)"></select>
+      </div>
+      <div class="cfg-grid" id="cfgGrid"></div>
+      <div class="btns"><button class="ghost" onclick="run()">Recalcular</button></div>
+    </div>
+  </details>
+
+  <div id="emptyState" class="empty">Cole o output do assessment e clique <b>Analisar</b> — ou use <b>Carregar exemplo</b> para ver a ferramenta com o cenário do relatório de referência (250 sensors, IRE parcial, Health 78%, CSDM parcial).</div>
+
+  <!-- RESULTS -->
+  <div id="results">
+
+    <!-- Cabeçalho só para impressão/PDF -->
+    <div class="print-only" id="printHead"></div>
+
+    <!-- GATE -->
+    <div class="gate" id="gate"></div>
+
+    <!-- DASHBOARD -->
+    <div class="sec"><span class="idx">01</span><h2>Resultado Consolidado por Domínio</h2></div>
+    <div class="cards" id="cards"></div>
+
+    <div class="sec"><span class="idx">02</span><h2>Indicadores</h2></div>
+    <div class="viz-grid">
+      <div class="viz-card" id="vizCred"></div>
+      <div class="viz-card" id="vizIreCsdm"></div>
+    </div>
+    <div class="viz-grid" style="margin-top:18px">
+      <div class="viz-card" id="vizWrite"></div>
+      <div class="viz-card" id="vizHealth"></div>
+    </div>
+
+    <div class="sec"><span class="idx">03</span><h2>Composição do Score <span class="hint" style="font-weight:400">(onde a maturidade está sendo perdida)</span></h2></div>
+    <div class="viz-card" id="contribBox"></div>
+
+    <div class="sec"><span class="idx">04</span><h2>Principais Riscos</h2></div>
+    <table class="dt" id="riskTbl"></table>
+
+    <div class="sec"><span class="idx">05</span><h2>Plano de Correção Priorizado</h2></div>
+    <table class="dt" id="planTbl"></table>
+
+    <div class="sec"><span class="idx">06</span><h2>Estimativa de Esforço <span class="hint" style="font-weight:400">(células editáveis)</span></h2></div>
+    <table class="dt" id="effortTbl"></table>
+
+    <div class="sec"><span class="idx">07</span><h2>Evidências (log parseado por domínio)</h2></div>
+    <div class="evi" id="evidence"></div>
+
+    <div class="sec no-print"><span class="idx">08</span><h2>Comparativo de Execuções</h2></div>
+    <div id="compareBox" class="no-print"></div>
+
+  </div>
+
+  <footer>
+    CMDB Baseline Assessment Console · arquivo único, offline · parser tolerante a prefixos de Background Script / syslog ·
+    veredito derivado da regra de ouro do framework. Exportações .doc/.xls abrem nativamente em MS Office e LibreOffice.
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — domínios, criticidade, pesos (editáveis na UI)
+   ============================================================ */
+const DOMAINS = [
+  {key:'probes',     label:'Probes Legados',      crit:'Baixa',      weight:1.0,  structural:false},
+  {key:'sensors',    label:'Sensors Legados',     crit:'Muito Alta', weight:3.0,  structural:true},
+  {key:'writecontrol',label:'Controle de Escrita',crit:'Muito Alta', weight:3.0,  structural:true},
+  {key:'schedules',  label:'Discovery Schedules', crit:'Média',      weight:1.5,  structural:false},
+  {key:'credentials',label:'Credenciais',         crit:'Média',      weight:1.5,  structural:false},
+  {key:'ire',        label:'IRE',                 crit:'Alta',       weight:2.5,  structural:true},
+  {key:'reconciliation',label:'Reconciliation',   crit:'Alta',       weight:2.0,  structural:true},
+  {key:'health',     label:'CMDB Health',         crit:'Alta',       weight:2.5,  structural:true},
+  {key:'csdm',       label:'CSDM',                crit:'Alta',       weight:2.5,  structural:true},
+];
+const PTS = {PASS:1, WARN:0.5, FAIL:0};
+
+/* modos de consolidação (formas de derivar o veredito a partir dos mesmos status) */
+const CONSO_MODES = {
+  gate:    'Gate estrito — qualquer FAIL→NO-GO, qualquer WARN→GO-RESTRITO (padrão do framework)',
+  struct:  'Piso estrutural — só domínios estruturais limitam o gate; operacionais só descontam score',
+  weighted:'Ponderado puro — veredito por faixa de score (ignora o gate binário)',
+  critical:'Crítico-ponderado — criticidade "Muito Alta" pesa 1.5× no score'
+};
+let CONSO = 'gate';
+
+let lastModel = null;
+
+/* render config inputs */
+(function(){
+  const sel = document.getElementById('consoMode');
+  Object.keys(CONSO_MODES).forEach(k=>{
+    const o=document.createElement('option'); o.value=k; o.textContent=CONSO_MODES[k]; sel.appendChild(o);
+  });
+  sel.value = CONSO;
+  sel.addEventListener('change', ()=>{ CONSO = sel.value; if(lastModel) run(); });
+  const g = document.getElementById('cfgGrid');
+  DOMAINS.forEach(d=>{
+    const w = document.createElement('div');
+    w.innerHTML = '<label>'+d.label+' · peso<input type="number" step="0.5" min="0" value="'+d.weight+'" data-k="'+d.key+'"></label>';
+    g.appendChild(w);
+  });
+})();
+function readWeights(){
+  const sel = document.getElementById('consoMode'); if(sel) CONSO = sel.value;
+  document.querySelectorAll('#cfgGrid input').forEach(i=>{
+    const d = DOMAINS.find(x=>x.key===i.dataset.k);
+    if(d){ const v=parseFloat(i.value); if(!isNaN(v)) d.weight=v; }
+  });
+}
+
+/* ============================================================
+   PARSER — tolerante a "*** Script:", syslog, timestamps
+   ============================================================ */
+function normLine(raw){
+  // pega o último marcador [INFO]/[WARN]/[FAIL] e o que vem depois
+  const m = raw.match(/\[(INFO|WARN|FAIL)\]\s?(.*)$/);
+  if(m){ return {level:m[1], text:m[2].trim()}; }
+  return null; // linhas sem marcador (cabeçalhos === ) são ignoradas
+}
+
+function sectionKey(title){
+  const t = title.toUpperCase();
+  if(t.includes('PROBES')) return 'probes';
+  if(t.includes('SENSORS')) return 'sensors';
+  if(t.includes('ESCRITA')) return 'writecontrol';
+  if(t.includes('SCHEDULES')) return 'schedules';
+  if(t.includes('CREDEN')) return 'credentials';
+  if(t.includes('RECONCIL')) return 'reconciliation';
+  if(t.includes('IRE')) return 'ire';
+  if(t.includes('HEALTH')) return 'health';
+  if(t.includes('CSDM')) return 'csdm';
+  if(t.includes('PLANO DE CORRE')) return 'plan';
+  if(t.includes('VEREDITO')) return 'verdict';
+  return null;
+}
+
+function parse(text){
+  const model = {
+    status:{}, lines:{}, metrics:{
+      sensorsCount:null, schedulesCount:null,
+      cred:{total:null,alive:null,dead:null,dangerous:null,indeterminate:null,aliveList:[],deadList:[],dangerList:[],indetList:[]},
+      ire:{rules:null,withRule:[],without:[],nullRisk:null},
+      write:{total:null,manual:null,pctManual:null,ungoverned:null,tm:null,intWrites:null,governed:null},
+      recon:{rules:null,authoritative:null,sources:null},
+      health:{score:null,worstDim:null,worst:null,stale:null,dup:null,orphans:null,generic:null,dims:[]},
+      csdm:{modelOk:[],modelMissing:[],inUse:[],noRecords:[],generic:false}
+    },
+    plan:[], verdict:{}
+  };
+  DOMAINS.forEach(d=>{ model.lines[d.key]=[]; });
+  let cur = null;
+
+  text.split(/\r?\n/).forEach(raw=>{
+    if(!raw.trim()) return;
+    const nl = normLine(raw);
+    if(!nl) return;
+    const txt = nl.text;
+
+    // mudança de seção
+    if(txt.startsWith('>>>')){
+      const k = sectionKey(txt.replace(/^>>>\s*/,''));
+      cur = k; return;
+    }
+    // ignora cabeçalho de regra repetido
+    if(txt.startsWith('FAIL bloqueia')) return;
+
+    // armazena linha bruta no domínio corrente (para evidências)
+    if(cur && model.lines[cur]) model.lines[cur].push({level:nl.level, text:txt});
+
+    // ---- VEREDITO FINAL: PROBES = PASS ----
+    let vm = txt.match(/^([A-Z]+)\s*=\s*(PASS|WARN|FAIL)\s*$/);
+    if(vm){
+      const k = vm[1].toLowerCase();
+      if(DOMAINS.find(d=>d.key===k)){ model.status[k]=vm[2]; model.verdict[k]=vm[2]; }
+      return;
+    }
+    // ---- Resultado: XXX (fallback se não houver veredito) ----
+    let rm = txt.match(/Resultado:\s*(PASS|WARN|FAIL)/i);
+    if(rm && cur && DOMAINS.find(d=>d.key===cur)){
+      if(!model.status[cur]) model.status[cur]=rm[1].toUpperCase();
+    }
+    // status diretos por linha PASS:/WARN:/FAIL:
+    let dm = txt.match(/^(PASS|WARN|FAIL):/);
+    if(dm && cur && DOMAINS.find(d=>d.key===cur) && !model.status[cur]){
+      // só usa como hint fraco; veredito/Resultado têm prioridade
+    }
+
+    // ---- métricas ----
+    let mm;
+    if((mm = txt.match(/Sensors ativos escrevendo direto no CMDB \((\d+)\)/i))) model.metrics.sensorsCount=+mm[1];
+    if((mm = txt.match(/Discovery Schedules ativos \((\d+)\)/i))) model.metrics.schedulesCount=+mm[1];
+    if((mm = txt.match(/Total ativas:\s*(\d+)/i))) model.metrics.cred.total=+mm[1];
+    if((mm = txt.match(/Vivas:\s*(\d+)/i))) model.metrics.cred.alive=+mm[1];
+    if((mm = txt.match(/Mortas:\s*(\d+)/i))) model.metrics.cred.dead=+mm[1];
+    if((mm = txt.match(/Perigosas:\s*(\d+)/i))) model.metrics.cred.dangerous=+mm[1];
+    if((mm = txt.match(/Indeterminadas:\s*(\d+)/i))) model.metrics.cred.indeterminate=+mm[1];
+    if((mm = txt.match(/^VIVA\s*\|\s*(.+)$/))) model.metrics.cred.aliveList.push(mm[1].trim());
+    if((mm = txt.match(/^MORTA\s*\|\s*(.+)$/))) model.metrics.cred.deadList.push(mm[1].trim());
+    if((mm = txt.match(/^PERIGOSA\s*\|\s*(.+)$/))) model.metrics.cred.dangerList.push(mm[1].trim());
+    if((mm = txt.match(/^INDETERMINADA\s*\|\s*(.+)$/))) model.metrics.cred.indetList.push(mm[1].trim());
+    if((mm = txt.match(/Regras IRE ativas encontradas:\s*(\d+)/i))) model.metrics.ire.rules=+mm[1];
+    if((mm = txt.match(/^COM REGRA IRE\s*\|\s*(.+)$/))) model.metrics.ire.withRule.push(mm[1].trim());
+    if((mm = txt.match(/^SEM REGRA IRE\s*\|\s*(.+)$/))) model.metrics.ire.without.push(mm[1].trim());
+    if((mm = txt.match(/allow_null_attribute=true:\s*(\d+)/i))) model.metrics.ire.nullRisk=+mm[1];
+    if((mm = txt.match(/Score médio de CMDB Health(?:\s*\(fallback\))?:\s*(\d+)%/i))) model.metrics.health.score=+mm[1];
+    if((mm = txt.match(/^DIMENSAO\s*\|\s*(.+?)\s*=\s*(\d+)%/i))) model.metrics.health.dims.push({dim:mm[1].trim(), val:+mm[2]});
+    if((mm = txt.match(/Pior dimensão:\s*(.+?)\s*\((\d+)%\)/i))){ model.metrics.health.worstDim=mm[1].trim(); model.metrics.health.worst=+mm[2]; }
+    if((mm = txt.match(/CIs stale \(total\):\s*(\d+)/i))) model.metrics.health.stale=+mm[1];
+    if((mm = txt.match(/Duplicate tasks abertas(?:\s*\([^)]*\))?:\s*(\d+)/i))) model.metrics.health.dup=+mm[1];
+    if((mm = txt.match(/órfãos\s*\(sem relacionamento\):\s*(\d+)/i))) model.metrics.health.orphans=+mm[1];
+    if((mm = txt.match(/classe genérica \(total\):\s*(\d+)/i))) model.metrics.health.generic=+mm[1];
+    if((mm = txt.match(/CIs totais:\s*(\d+)\s*\|\s*manuais:\s*(\d+)\s*\((\d+)%\)\s*\|\s*fontes a revisar:\s*(\d+)/i))){
+      model.metrics.write.total=+mm[1]; model.metrics.write.manual=+mm[2]; model.metrics.write.pctManual=+mm[3]; model.metrics.write.ungoverned=+mm[4];
+      model.metrics.write.governed = model.metrics.write.total - model.metrics.write.manual - model.metrics.write.ungoverned;
+    }
+    if((mm = txt.match(/Transform Maps ativos em cmdb_ci:\s*(\d+)/i))) model.metrics.write.tm=+mm[1];
+    if((mm = txt.match(/CIs criados por contas de integração:\s*(\d+)/i))) model.metrics.write.intWrites=+mm[1];
+    if((mm = txt.match(/Regras de reconciliation ativas:\s*(\d+)/i))) model.metrics.recon.rules=+mm[1];
+    if((mm = txt.match(/Datasources autoritativos:\s*(\d+)/i))) model.metrics.recon.authoritative=+mm[1];
+    if((mm = txt.match(/Fontes distintas escrevendo:\s*(\d+)/i))) model.metrics.recon.sources=+mm[1];
+    if((mm = txt.match(/^MODELO OK\s*\|\s*(.+)$/))) model.metrics.csdm.modelOk.push(mm[1].trim());
+    if((mm = txt.match(/^MODELO AUSENTE\s*\|\s*(.+)$/))) model.metrics.csdm.modelMissing.push(mm[1].trim());
+    if((mm = txt.match(/^EM USO\s*\|\s*(.+)$/))) model.metrics.csdm.inUse.push(mm[1].trim());
+    if((mm = txt.match(/^SEM REGISTROS\s*\|\s*(.+)$/))) model.metrics.csdm.noRecords.push(mm[1].trim());
+    if(/USO GEN[ÉE]RICO DETECTADO/i.test(txt)) model.metrics.csdm.generic=true;
+    if((mm = txt.match(/PRIORIDADE\s*(\d+):\s*(.+)$/i))) model.plan.push({p:+mm[1], text:mm[2].trim(), level:nl.level});
+  });
+
+  // default: domínios não detectados ficam indefinidos (não força PASS)
+  return model;
+}
+
+/* ============================================================
+   SCORING — determinístico
+   ============================================================ */
+function score(model){
+  readWeights();
+  let sumW=0, sumP=0, anyFail=false, anyWarn=false, missing=[];
+  let structFail=false, structWarn=false;
+  const contrib=[]; // composição: quanto cada domínio "perde" de score ponderado
+  const critMult = (CONSO==='critical') ? (d)=> (d.crit==='Muito Alta'?1.5:1) : ()=>1;
+
+  DOMAINS.forEach(d=>{
+    const st = model.status[d.key];
+    if(!st){ missing.push(d.key); return; }
+    const w = d.weight * critMult(d);
+    sumW += w; sumP += w*PTS[st];
+    if(st==='FAIL'){ anyFail=true; if(d.structural) structFail=true; }
+    if(st==='WARN'){ anyWarn=true; if(d.structural) structWarn=true; }
+    // pontos perdidos = w*(1-PTS[st]); usado para ranquear o que mais derruba o score
+    const lost = w*(1-PTS[st]);
+    if(lost>0) contrib.push({key:d.key, label:d.label, st, struct:d.structural, lost});
+  });
+  const pct = sumW>0 ? Math.round((sumP/sumW)*100) : 0;
+  // normaliza contribuição como % do total de pontos possíveis (sumW)
+  contrib.forEach(c=> c.share = sumW>0 ? Math.round(c.lost/sumW*100) : 0);
+  contrib.sort((a,b)=> b.lost-a.lost);
+
+  // ---- GATE conforme o modo de consolidação ----
+  let gate, gateWhy;
+  if(CONSO==='struct'){
+    gate = structFail ? 'NO-GO' : (structWarn ? 'GO-RESTRITO' : (anyFail||anyWarn ? 'GO-RESTRITO' : 'GO'));
+    // operacional em FAIL não bloqueia, mas impede GO limpo
+    if(!structFail && !structWarn && (anyFail||anyWarn)) gate='GO-RESTRITO';
+    gateWhy = structFail?'Domínio estrutural em FAIL.':structWarn?'Domínio estrutural em WARN.':(anyFail||anyWarn?'Apenas pendências operacionais.':'Nenhuma pendência.');
+  } else if(CONSO==='weighted'){
+    gate = pct>=90 ? 'GO' : (pct>=60 ? 'GO-RESTRITO' : 'NO-GO');
+    gateWhy = 'Derivado da faixa de score ('+pct+'%).';
+  } else { // gate / critical usam regra estrita
+    gate = anyFail ? 'NO-GO' : (anyWarn ? 'GO-RESTRITO' : 'GO');
+    gateWhy = anyFail?'Há FAIL.':anyWarn?'Há WARN.':'Tudo PASS.';
+  }
+
+  // banda de maturidade
+  let band = pct<40?1: pct<60?2: pct<75?3: pct<90?4: 5;
+  const structDef = DOMAINS.filter(d=>d.structural && (model.status[d.key]==='WARN'||model.status[d.key]==='FAIL')).length;
+  let mat = band;
+  if(structDef>=4) mat = Math.min(mat,1);
+  else if(structDef>=2) mat = Math.max(1, mat-1);
+  if(anyFail) mat = Math.min(mat, structDef>=2?1:2);
+  mat = Math.max(0, Math.min(5, mat));
+  return {pct, gate, gateWhy, mat, structDef, anyFail, anyWarn, structFail, structWarn, missing, contrib, mode:CONSO};
+}
+
+/* leitura consolidada por domínio (texto) */
+const READINGS = {
+  probes:{PASS:'Sem evidência relevante de probes legacy.', WARN:'Probes legados ativos — escrita fora do pipeline atual.', FAIL:'Probes legados dominando a coleta.'},
+  sensors:{PASS:'Nenhum sensor legado escrevendo direto.', WARN:'Sensors escrevendo direto na CMDB (bypass parcial do IRE).', FAIL:'Escrita massiva fora do IRE.'},
+  writecontrol:{PASS:'Escrita sob controle do IRE/Discovery.', WARN:'Carga manual / Transform Map / Table API fora do pipeline governado.', FAIL:'Carga manual dominante na CMDB.'},
+  schedules:{PASS:'Schedules ativos — validar efetividade (discovery_status).', WARN:'Cobertura de schedule parcial / sem execução recente.', FAIL:'Nenhum Discovery Schedule ativo.'},
+  credentials:{PASS:'Credenciais sob controle e em uso.', WARN:'Credenciais mortas / baixa rastreabilidade operacional.', FAIL:'Credenciais perigosas (auth failures) em uso.'},
+  ire:{PASS:'Cobertura de identificação adequada.', WARN:'Classes críticas sem regra de identificação.', FAIL:'IRE indisponível — sem reconciliação confiável.'},
+  reconciliation:{PASS:'Reconciliation governada (precedência definida).', WARN:'Multi-source sem datasource autoritativo / sem regras.', FAIL:'Múltiplas fontes sem nenhuma regra de reconciliation.'},
+  health:{PASS:'Qualidade profunda adequada.', WARN:'Stale/dup/orphan/genérico ou dimensão abaixo do ideal.', FAIL:'Dimensão de qualidade crítica (<70%).'},
+  csdm:{PASS:'Modelo CSDM adotado.', WARN:'Adoção parcial / uso genérico de classes.', FAIL:'Modelo CSDM ausente.'},
+};
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function badge(st){ const c={PASS:'b-pass',WARN:'b-warn',FAIL:'b-fail'}[st]||'b-warn'; return '<span class="badge '+c+'">'+(st||'N/D')+'</span>'; }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function cardMetric(d, m){
+  switch(d.key){
+    case 'sensors': return m.metrics.sensorsCount!=null ? m.metrics.sensorsCount+'<small> sensors</small>' : '—';
+    case 'writecontrol': return m.metrics.write.pctManual!=null ? m.metrics.write.pctManual+'%<small> manual · '+(m.metrics.write.tm||0)+' TM</small>' : '—';
+    case 'schedules': return m.metrics.schedulesCount!=null ? m.metrics.schedulesCount+'<small> ativos</small>' : '—';
+    case 'credentials': return m.metrics.cred.total!=null ? m.metrics.cred.total+'<small> ativas · '+(m.metrics.cred.dead||0)+' mortas</small>' : '—';
+    case 'ire': return m.metrics.ire.rules!=null ? m.metrics.ire.rules+'<small> regras · '+(m.metrics.ire.without.length)+' gaps</small>' : '—';
+    case 'reconciliation': return m.metrics.recon.rules!=null ? m.metrics.recon.rules+'<small> regras · '+(m.metrics.recon.authoritative||0)+' auth</small>' : '—';
+    case 'health': {
+      const h=m.metrics.health;
+      if(h.worst!=null) return h.worst+'%<small> pior dim ('+(h.worstDim||'')+')</small>';
+      return h.score!=null ? h.score+'%<small> score</small>' : '—';
+    }
+    case 'csdm': return m.metrics.csdm.generic ? 'genérico<small> detectado</small>' : (m.metrics.csdm.inUse.length+'<small> classes em uso</small>');
+    default: return '—';
+  }
+}
+
+function render(model, cmp){
+  lastModel = model;
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('results').style.display='block';
+  const s = score(model);
+
+  /* Cabeçalho de impressão/PDF */
+  document.getElementById('printHead').innerHTML =
+    '<h1>Assessment ITOM / CMDB — Baseline</h1>'+
+    '<div class="meta">Gerado em '+new Date().toLocaleDateString('pt-BR')+
+    ' · Veredito: <b>'+s.gate+'</b> · Score ponderado: <b>'+s.pct+'%</b> · Maturidade: <b>'+s.mat+'/5</b></div>'+
+    '<hr style="border:none;border-top:2px solid #1c1b18;margin-top:8px">';
+
+  /* GATE */
+  const gateCls = s.gate==='GO'?'v-go':(s.gate==='GO-RESTRITO'?'v-restr':'v-nogo');
+  const fillCls = s.gate==='GO'?'gate-cell-fill-go':(s.gate==='GO-RESTRITO'?'gate-cell-fill-restr':'gate-cell-fill-nogo');
+  document.getElementById('gate').innerHTML =
+    '<div class="'+fillCls+'"><span class="up">Veredito do Gate · '+s.mode+'</span>'+
+      '<div class="verdict-big '+gateCls+'">'+s.gate+'</div>'+
+      '<div class="verdict-sub">'+esc(s.gateWhy)+'</div></div>'+
+    '<div><span class="up">Score Ponderado</span>'+
+      '<div class="metric-num">'+s.pct+'<small>%</small></div>'+
+      '<div class="gauge"><span style="width:'+s.pct+'%"></span></div>'+
+      '<div class="verdict-sub">PASS=1 · WARN=0.5 · FAIL=0, ponderado por criticidade'+(s.mode==='critical'?' (Muito Alta ×1.5)':'')+'.</div></div>'+
+    '<div><span class="up">Maturidade</span>'+
+      '<div class="metric-num">'+s.mat+'<small> / 5</small></div>'+
+      '<div class="mat-dots">'+[1,2,3,4,5].map(i=>'<i class="'+(i<=s.mat?'on':'')+'"></i>').join('')+'</div>'+
+      '<div class="verdict-sub">'+s.structDef+' deficiência(s) estrutural(is) de '+DOMAINS.filter(d=>d.structural).length+' domínios estruturais.</div></div>';
+
+  /* CARDS */
+  document.getElementById('cards').innerHTML = DOMAINS.map(d=>{
+    const st = model.status[d.key];
+    let deltaHtml='';
+    if(cmp){
+      const stB = cmp.status[d.key];
+      if(stB && st && stB!==st){
+        const improved = PTS[st] > PTS[stB];
+        deltaHtml = '<div class="delta" style="color:'+(improved?'var(--pass)':'var(--fail)')+'">'+(improved?'▲':'▼')+' '+stB+' → '+st+'</div>';
+      } else if(stB && st && stB===st){
+        deltaHtml = '<div class="delta" style="color:var(--ink-soft)">= sem mudança</div>';
+      }
+    }
+    return '<div class="card"><div class="ch"><span class="cname">'+d.label+'</span>'+badge(st)+'</div>'+
+      '<div class="crit">Criticidade: <b>'+d.crit+'</b> · peso '+d.weight+'</div>'+
+      '<div class="cmetric">'+cardMetric(d,model)+'</div>'+
+      deltaHtml+
+      '<div class="cread">'+(st?READINGS[d.key][st]:'Domínio não detectado no log.')+'</div></div>';
+  }).join('');
+
+  /* VIZ — credenciais */
+  const c = model.metrics.cred;
+  if(c.total!=null){
+    const tot = c.total||1;
+    const seg = (n,cls)=>'<div class="bar-row"><span class="bl">'+cls.label+'</span><div class="bt"><span class="'+cls.fill+'" style="width:'+Math.round((n||0)/tot*100)+'%"></span></div><span class="bv">'+(n||0)+'</span></div>';
+    document.getElementById('vizCred').innerHTML =
+      '<h3>Credenciais · higiene</h3>'+
+      seg(c.alive,{label:'Vivas',fill:'fill-alive'})+
+      seg(c.dead,{label:'Mortas',fill:'fill-dead'})+
+      seg(c.dangerous,{label:'Perigosas',fill:'fill-dang'})+
+      (c.indeterminate ? seg(c.indeterminate,{label:'Indeterm.',fill:'fill-indet'}) : '')+
+      (c.indeterminate ? '<p class="hint" style="margin-top:8px;color:var(--warn)">Uso não avaliável nesta instância (sem fonte de uso) — indeterminadas não são mortas.</p>' : '')+
+      '<p class="hint" style="margin-top:8px">Nomes das credenciais não expostos nos indicadores — consultar na seção <b>Evidências</b> (log).</p>';
+  } else {
+    document.getElementById('vizCred').innerHTML='<h3>Credenciais · higiene</h3><p class="hint">Sem dados quantitativos de credenciais no log.</p>';
+  }
+
+  /* VIZ — IRE + CSDM */
+  const ire=model.metrics.ire, csdm=model.metrics.csdm;
+  document.getElementById('vizIreCsdm').innerHTML =
+    '<h3>IRE · cobertura de identidade</h3>'+
+    '<div style="font-size:12px;margin-bottom:8px">Regras ativas: <b>'+(ire.rules!=null?ire.rules:'—')+'</b>'+
+      (ire.nullRisk!=null?' · <span style="color:var(--warn)">entries match-em-nulo: <b>'+ire.nullRisk+'</b></span>':'')+'</div>'+
+    (ire.withRule.length?'<ul class="tight"><b style="font-size:11px;color:var(--pass)">Com regra:</b> '+ire.withRule.map(esc).join(', ')+'</ul>':'')+
+    (ire.without.length?'<ul class="tight"><b style="font-size:11px;color:var(--warn)">Sem regra:</b> '+ire.without.map(esc).join(', ')+'</ul>':'')+
+    '<h3 style="margin-top:16px">CSDM · adoção</h3>'+
+    '<div style="font-size:12px">Classes em uso: <b>'+csdm.inUse.length+'</b> · ausentes: <b>'+csdm.modelMissing.length+'</b></div>'+
+    (csdm.generic?'<div class="delta" style="color:var(--warn)">⚠ uso genérico de cmdb_ci_service detectado</div>':'<div class="delta" style="color:var(--pass)">✓ sem uso genérico detectado</div>');
+
+  /* VIZ — ESCRITA & FONTES (writecontrol + reconciliation) */
+  const w=model.metrics.write, rc=model.metrics.recon;
+  let wHtml='<h3>Escrita na CMDB · governança</h3>';
+  if(w.total!=null){
+    const tot=w.total||1;
+    const wseg=(n,lbl,fill)=>'<div class="bar-row"><span class="bl">'+lbl+'</span><div class="bt"><span class="'+fill+'" style="width:'+Math.round((n||0)/tot*100)+'%"></span></div><span class="bv">'+(n||0)+'</span></div>';
+    wHtml+= wseg(w.governed,'Governada','fill-alive')+
+            wseg(w.ungoverned,'A revisar','fill-indet')+
+            wseg(w.manual,'Manual','fill-dang')+
+            '<p class="hint" style="margin-top:6px">Manual '+(w.pctManual!=null?w.pctManual+'%':'—')+' · Transform Maps em cmdb_ci: <b>'+(w.tm!=null?w.tm:'—')+'</b> · CIs por integração: <b>'+(w.intWrites!=null?w.intWrites:'—')+'</b></p>';
+  } else { wHtml+='<p class="hint">Sem dados de origem de escrita (discovery_source) no log.</p>'; }
+  wHtml+='<h3 style="margin-top:16px">Reconciliation · multi-source</h3>'+
+    '<div style="font-size:12px">Fontes distintas: <b>'+(rc.sources!=null?rc.sources:'—')+'</b> · regras: <b>'+(rc.rules!=null?rc.rules:'—')+'</b> · autoritativos: <b>'+(rc.authoritative!=null?rc.authoritative:'—')+'</b></div>'+
+    ((rc.sources>1 && !rc.authoritative)?'<div class="delta" style="color:var(--warn)">⚠ multi-source sem datasource autoritativo</div>':'');
+  document.getElementById('vizWrite').innerHTML=wHtml;
+
+  /* VIZ — DIMENSÕES DE HEALTH */
+  const h=model.metrics.health;
+  let hHtml='<h3>CMDB Health · dimensões</h3>';
+  if(h.dims && h.dims.length){
+    const dcol=v=> v<70?'fill-dang': v<85?'fill-dead':'fill-alive';
+    h.dims.forEach(dd=>{
+      hHtml+='<div class="bar-row"><span class="bl">'+esc(dd.dim)+'</span><div class="bt"><span class="'+dcol(dd.val)+'" style="width:'+dd.val+'%"></span></div><span class="bv">'+dd.val+'%</span></div>';
+    });
+    if(h.worstDim) hHtml+='<p class="hint" style="margin-top:6px">Pior dimensão: <b>'+esc(h.worstDim)+' ('+h.worst+'%)</b> — define o piso de qualidade.</p>';
+  } else if(h.worst!=null){
+    hHtml+='<div class="bar-row"><span class="bl">'+esc(h.worstDim||'pior dim')+'</span><div class="bt"><span class="'+(h.worst<70?'fill-dang':h.worst<85?'fill-dead':'fill-alive')+'" style="width:'+h.worst+'%"></span></div><span class="bv">'+h.worst+'%</span></div>';
+  } else if(h.score!=null){
+    hHtml+='<div class="bar-row"><span class="bl">score médio</span><div class="bt"><span class="'+(h.score<70?'fill-dang':h.score<85?'fill-dead':'fill-alive')+'" style="width:'+h.score+'%"></span></div><span class="bv">'+h.score+'%</span></div>';
+  } else { hHtml+='<p class="hint">Dimensão de Health não medida nesta execução.</p>'; }
+  hHtml+='<div style="font-size:11.5px;color:var(--ink-soft);margin-top:10px;border-top:1px dashed var(--line);padding-top:8px">'+
+    'Stale: <b>'+(h.stale!=null?h.stale:'—')+'</b> · Duplicates: <b>'+(h.dup!=null?h.dup:'—')+'</b> · Órfãos: <b>'+(h.orphans!=null?h.orphans:'—')+'</b> · Classe genérica: <b>'+(h.generic!=null?h.generic:'—')+'</b></div>';
+  document.getElementById('vizHealth').innerHTML=hHtml;
+
+  /* COMPOSIÇÃO DO SCORE — quanto cada domínio derruba a maturidade */
+  const cbx=document.getElementById('contribBox');
+  if(s.contrib && s.contrib.length){
+    const maxLost=s.contrib[0].lost||1;
+    let rows=s.contrib.map(c=>{
+      const wpct=Math.round(c.lost/maxLost*100);
+      const fill=c.st==='FAIL'?'fill-dang':'fill-dead';
+      return '<div class="bar-row"><span class="bl" style="width:130px">'+esc(c.label)+'</span>'+
+        '<div class="bt" style="height:18px"><span class="'+fill+'" style="width:'+wpct+'%"></span></div>'+
+        '<span class="bv" style="width:78px;text-align:right">−'+c.share+' pts'+(c.struct?' ◆':'')+'</span></div>';
+    }).join('');
+    cbx.innerHTML='<h3>Pontos perdidos por domínio (ordenado pelo maior impacto)</h3>'+rows+
+      '<p class="hint" style="margin-top:10px">◆ = domínio estrutural. A barra mostra o peso relativo da perda; "−N pts" é a fração do score total ponderado perdida naquele domínio. Some das perdas = '+(100-s.pct)+' pts (score atual: '+s.pct+'%).</p>';
+  } else {
+    cbx.innerHTML='<h3>Composição do Score</h3><p class="hint">Nenhuma perda — todos os domínios detectados em PASS.</p>';
+  }
+
+  /* RISCOS — derivados */
+  const RISK_MAP = {
+    sensors:{WARN:['Escrita direta via sensors','Inconsistência CMDB e bypass parcial do IRE'],FAIL:['Escrita massiva via sensors','Corrupção de identidade e reconciliação']},
+    writecontrol:{WARN:['Carga manual / bypass de IRE','Identidade não reconciliada e duplicatas silenciosas'],FAIL:['Carga manual dominante','CMDB não confiável como fonte de verdade']},
+    reconciliation:{WARN:['Multi-source sem precedência','Sobrescrita de atributos entre fontes'],FAIL:['Sem regras de reconciliation','Last-write-wins descontrolado entre fontes']},
+    ire:{WARN:['Classes críticas sem regra IRE','Duplicidade e baixa confiabilidade de serviços'],FAIL:['IRE indisponível','Sem reconciliação — duplicação descontrolada']},
+    health:{WARN:['Stale/dup/orphan ou dimensão fraca','Evolução sem controle de qualidade'],FAIL:['Dimensão de qualidade crítica','Decisões sobre dados não confiáveis']},
+    csdm:{WARN:['Uso genérico de cmdb_ci_service','Estrutura CSDM inconsistente'],FAIL:['Modelo CSDM ausente','Sem alinhamento a serviço de negócio']},
+    credentials:{WARN:['Credenciais mortas / sem rastreabilidade','Complexidade operacional e cobertura incerta'],FAIL:['Credenciais perigosas em uso','Risco de segurança e falhas de coleta']},
+    probes:{WARN:['Probes legados ativos','Coleta fora do pipeline padronizado']},
+    schedules:{FAIL:['Sem Discovery Schedule ativo','CMDB sem atualização — staleness garantido']},
+  };
+  let riskRows='<tr><th>Risco</th><th>Impacto Operacional</th><th>Origem</th></tr>';
+  let hasRisk=false;
+  DOMAINS.forEach(d=>{
+    const st=model.status[d.key];
+    const r = RISK_MAP[d.key] && RISK_MAP[d.key][st];
+    if(r){ hasRisk=true; riskRows+='<tr><td><b>'+esc(r[0])+'</b></td><td>'+esc(r[1])+'</td><td>'+badge(st)+' '+d.label+'</td></tr>'; }
+  });
+  if(!hasRisk) riskRows+='<tr><td colspan="3">Nenhum risco material derivado (todos os domínios PASS).</td></tr>';
+  document.getElementById('riskTbl').innerHTML=riskRows;
+
+  /* PLANO — combina PRIORIDADE parseadas + derivação por status */
+  const planActions = {
+    sensors:{WARN:'Racionalizar e desativar sensors legados; rotear escrita pelo IRE',FAIL:'Bloquear escrita direta de sensors; migrar para IRE'},
+    writecontrol:{WARN:'Conter carga manual / Transform Maps / Table API; rotear toda escrita via IRE',FAIL:'Bloquear escrita manual; reprocessar CIs ungoverned via IRE'},
+    reconciliation:{WARN:'Definir datasource autoritativo e precedência por atributo',FAIL:'Implantar regras de reconciliation antes de manter multi-source'},
+    ire:{WARN:'Criar regras de identificação para classes críticas (business/application service)',FAIL:'Habilitar/instalar IRE e definir identifiers por classe'},
+    health:{WARN:'Remediar pior dimensão + stale/dup/orphan; baseline de qualidade',FAIL:'Recuperar dimensão crítica (<70%); completeness/correctness'},
+    csdm:{WARN:'Eliminar uso genérico de cmdb_ci_service; alinhar classes ao CSDM',FAIL:'Implantar modelo CSDM e mapear serviços'},
+    credentials:{WARN:'Higienizar credenciais mortas; estabelecer rastreabilidade/affinity',FAIL:'Remover credenciais perigosas; corrigir auth failures'},
+    probes:{WARN:'Aposentar probes legados remanescentes'},
+    schedules:{FAIL:'Ativar Discovery Schedules e validar discovery_status'},
+  };
+  // prioridade: FAIL→P0, WARN estrutural→P1, WARN não-estrutural→P2
+  function prioOf(d,st){ if(st==='FAIL') return 0; if(st==='WARN') return d.structural?1:2; return null; }
+  let planItems=[];
+  DOMAINS.forEach(d=>{
+    const st=model.status[d.key]; const p=prioOf(d,st);
+    if(p!==null && planActions[d.key] && planActions[d.key][st]){
+      planItems.push({p, dom:d.label, st, action:planActions[d.key][st]});
+    }
+  });
+  planItems.sort((a,b)=>a.p-b.p);
+  let planRows='<tr><th>Prio</th><th>Domínio</th><th>Status</th><th>Ação Recomendada</th></tr>';
+  if(planItems.length){
+    planItems.forEach(it=>{ planRows+='<tr><td><b class="pill">P'+it.p+'</b></td><td>'+esc(it.dom)+'</td><td>'+badge(it.st)+'</td><td>'+esc(it.action)+'</td></tr>'; });
+  } else { planRows+='<tr><td colspan="4">Sem ações pendentes — ambiente estável.</td></tr>'; }
+  document.getElementById('planTbl').innerHTML=planRows;
+
+  /* ESFORÇO — bandas default editáveis, presentes só se houver P0/P1 */
+  const hasP0 = planItems.some(i=>i.p===0);
+  const hasP1 = planItems.some(i=>i.p===1);
+  const effortDefaults = [
+    {fr:'P0 — Estabilização estrutural', dur:'8–14 sem', sp:'4–7', cx:'Alta', show:hasP0||true},
+    {fr:'P1 — Governança e modelagem', dur:'10–16 sem', sp:'5–8', cx:'Alta', show:hasP1||true},
+    {fr:'P2 — Governança contínua', dur:'Contínuo', sp:'Contínuo', cx:'Média', show:true},
+  ];
+  let effRows='<tr><th>Frente</th><th>Duração</th><th>Sprints</th><th>Complexidade</th></tr>';
+  effortDefaults.forEach(e=>{
+    effRows+='<tr><td><b>'+esc(e.fr)+'</b></td><td class="edit" contenteditable="true">'+e.dur+'</td><td class="edit" contenteditable="true">'+e.sp+'</td><td class="edit" contenteditable="true">'+e.cx+'</td></tr>';
+  });
+  document.getElementById('effortTbl').innerHTML=effRows;
+
+  /* EVIDÊNCIAS */
+  let evi='';
+  DOMAINS.forEach(d=>{
+    const ls = model.lines[d.key]||[];
+    if(!ls.length) return;
+    evi+='<div class="evi-grp"><div class="evi-h" onclick="this.nextElementSibling.classList.toggle(\'open\')">'+
+      '<span class="en">'+d.label+'</span>'+badge(model.status[d.key])+'</div>'+
+      '<div class="evi-body">'+ls.map(l=>'<div class="logline"><span class="lv lv-'+l.level+'">['+l.level+']</span>'+esc(l.text)+'</div>').join('')+'</div></div>';
+  });
+  document.getElementById('evidence').innerHTML = evi || '<p class="hint" style="padding:12px">Sem linhas parseadas.</p>';
+
+  /* COMPARATIVO */
+  const cb=document.getElementById('compareBox');
+  if(cmp){
+    const sB=score(cmp);
+    let rows='<table class="dt"><tr><th>Domínio</th><th>Antes</th><th>Depois</th><th>Δ</th></tr>';
+    DOMAINS.forEach(d=>{
+      const a=cmp.status[d.key], b=model.status[d.key];
+      let delta='=';
+      if(a&&b&&a!==b) delta = (PTS[b]>PTS[a]?'<span style="color:var(--pass)">▲ melhora</span>':'<span style="color:var(--fail)">▼ regressão</span>');
+      else if(a&&b) delta='<span style="color:var(--ink-soft)">sem mudança</span>';
+      rows+='<tr><td>'+d.label+'</td><td>'+badge(a)+'</td><td>'+badge(b)+'</td><td>'+delta+'</td></tr>';
+    });
+    rows+='</table>';
+
+    // delta de MÉTRICAS (não só status) — capta mudanças dentro do mesmo status,
+    // ex.: nº de credenciais mortas mudou mas o domínio continua WARN
+    const mA=model.metrics, mB=cmp.metrics;
+    const metricDefs=[
+      ['Sensors diretos', mB.sensorsCount, mA.sensorsCount, true],
+      ['Escrita manual %', mB.write.pctManual, mA.write.pctManual, true],
+      ['Cred. vivas', mB.cred.alive, mA.cred.alive, false],
+      ['Cred. mortas', mB.cred.dead, mA.cred.dead, true],
+      ['Cred. perigosas', mB.cred.dangerous, mA.cred.dangerous, true],
+      ['Cred. indeterminadas', mB.cred.indeterminate, mA.cred.indeterminate, true],
+      ['IRE gaps', mB.ire.without.length, mA.ire.without.length, true],
+      ['Health pior dim %', mB.health.worst, mA.health.worst, false],
+      ['CIs stale', mB.health.stale, mA.health.stale, true],
+      ['Duplicates', mB.health.dup, mA.health.dup, true],
+      ['Classe genérica', mB.health.generic, mA.health.generic, true]
+    ];
+    let mrows='';
+    metricDefs.forEach(d=>{
+      const before=d[1], after=d[2], lowerBetter=d[3];
+      if(before==null && after==null) return;
+      let delta='<span style="color:var(--ink-soft)">=</span>';
+      if(before!=null && after!=null && before!==after){
+        const improved = lowerBetter ? (after<before) : (after>before);
+        const diff=(after-before>0?'+':'')+(after-before);
+        delta='<span style="color:'+(improved?'var(--pass)':'var(--fail)')+'">'+(improved?'▲':'▼')+' '+diff+'</span>';
+      }
+      mrows+='<tr><td>'+d[0]+'</td><td>'+(before==null?'—':before)+'</td><td>'+(after==null?'—':after)+'</td><td>'+delta+'</td></tr>';
+    });
+    const metricsTbl = mrows ? '<table class="dt" style="margin-top:14px"><tr><th>Métrica</th><th>Antes</th><th>Depois</th><th>Δ</th></tr>'+mrows+'</table>' : '';
+
+    cb.innerHTML='<p class="hint">Base (antes) → Atual (depois). Score: '+sB.pct+'% → <b>'+s.pct+'%</b> · Gate: '+sB.gate+' → <b>'+s.gate+'</b> · Maturidade: '+sB.mat+' → <b>'+s.mat+'</b>.</p>'+rows+metricsTbl;
+    cb.parentElement.querySelectorAll('.sec.no-print').forEach(x=>x.style.display='flex');
+  } else {
+    cb.innerHTML='<p class="hint">Cole uma 2ª execução no campo comparativo e clique Analisar para ver o delta antes→depois.</p>';
+  }
+
+  // guarda score para export
+  lastModel._score = s;
+  lastModel._cmp = cmp || null;
+}
+
+/* ============================================================
+   AÇÕES
+   ============================================================ */
+function run(){
+  const a=document.getElementById('inA').value.trim();
+  const b=document.getElementById('inB').value.trim();
+  if(!a){ document.getElementById('parseStatus').textContent='cole o output primeiro'; return; }
+  const mA=parse(a);
+  const mB=b?parse(b):null;
+  const detected = Object.keys(mA.status).length;
+  document.getElementById('parseStatus').textContent = detected+' domínio(s) detectado(s)';
+  render(mA, mB);
+  document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function clearAll(){ document.getElementById('inA').value='';document.getElementById('inB').value='';
+  document.getElementById('results').style.display='none';document.getElementById('emptyState').style.display='block';
+  document.getElementById('parseStatus').textContent='aguardando'; lastModel=null; }
+
+function printReport(){
+  if(!lastModel){ alert('Analise um output primeiro — depois gere o PDF.'); return; }
+  // garante render atual e dá um tick para o navegador pintar antes do diálogo de impressão
+  setTimeout(function(){ window.print(); }, 100);
+}
+
+/* ============================================================
+   EXPORT — Word (.doc) e Excel (.xls) via HTML, offline, sem libs
+   ============================================================ */
+function tableHTML(id){ const t=document.getElementById(id); return t?t.outerHTML:''; }
+function nowStamp(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function nowBR(){ return new Date().toLocaleDateString('pt-BR'); }
+function stColor(st){ return st==='PASS'?'#2f7d4f':st==='WARN'?'#b8842a':st==='FAIL'?'#a83232':'#777'; }
+function stBg(st){ return st==='PASS'?'#e3efe6':st==='WARN'?'#f3eada':st==='FAIL'?'#f3e0de':'#eee'; }
+function gateColor(g){ return g==='GO'?'#2f7d4f':g==='GO-RESTRITO'?'#b8842a':'#a83232'; }
+
+/* Reconstrói uma tabela da tela em HTML limpo e estilizado p/ Word, colorindo status */
+function domTableToWord(id){
+  const t=document.getElementById(id); if(!t) return '';
+  let out='<table cellspacing="0" cellpadding="7" style="border-collapse:collapse;width:100%;font-size:10pt;margin:4px 0 10px;border:1px solid #c9c2b2">';
+  Array.prototype.forEach.call(t.rows,function(r){
+    const head = r.cells[0] && r.cells[0].tagName==='TH';
+    out+='<tr>';
+    Array.prototype.forEach.call(r.cells,function(c){
+      const txt=(c.innerText||'').trim();
+      if(head){ out+='<th align="left" style="background:#1c1b18;color:#fff;padding:7px 9px;font-size:8.5pt;letter-spacing:.5px;text-transform:uppercase;border:1px solid #1c1b18">'+txt+'</th>'; return; }
+      let style='padding:6px 9px;border:1px solid #d9d2c2;vertical-align:top;';
+      let cell=txt;
+      if(txt==='PASS'||txt==='WARN'||txt==='FAIL'){
+        style+='text-align:center;font-weight:bold;color:'+stColor(txt)+';background:'+stBg(txt)+';';
+      } else if(/^P[012]$/.test(txt)){
+        const p=txt; const col=p==='P0'?'#a83232':p==='P1'?'#b8842a':'#555';
+        style+='text-align:center;font-weight:bold;color:'+col+';';
+      }
+      out+='<td style="'+style+'">'+cell+'</td>';
+    });
+    out+='</tr>';
+  });
+  return out+'</table>';
+}
+
+function buildReportHTML(){
+  if(!lastModel) return '';
+  const s=lastModel._score, m=lastModel;
+
+  /* faixa de capa */
+  const cover =
+    '<div style="border-left:6px solid #b3431f;padding:2px 0 2px 14px;margin-bottom:6px">'+
+      '<div style="font-size:9pt;letter-spacing:3px;color:#b3431f;font-weight:bold">ITOM · DISCOVERY · CMDB · CSDM</div>'+
+      '<h1 style="font-size:24pt;margin:4px 0 2px">Assessment ITOM / CMDB</h1>'+
+      '<div style="font-size:11pt;color:#555">Avaliação Executiva e Técnica · Baseline · '+nowBR()+'</div>'+
+    '</div>';
+
+  /* KPIs */
+  const kpi =
+    '<table width="100%" style="border-collapse:collapse;margin:14px 0 4px"><tr>'+
+    '<td width="34%" style="border:1px solid #d9d2c2;padding:12px;background:'+stBg(s.gate==='GO'?'PASS':s.gate==='GO-RESTRITO'?'WARN':'FAIL')+'">'+
+      '<div style="font-size:8.5pt;letter-spacing:2px;color:#666">VEREDITO DO GATE</div>'+
+      '<div style="font-size:21pt;font-weight:bold;color:'+gateColor(s.gate)+'">'+s.gate+'</div></td>'+
+    '<td width="33%" style="border:1px solid #d9d2c2;padding:12px">'+
+      '<div style="font-size:8.5pt;letter-spacing:2px;color:#666">SCORE PONDERADO</div>'+
+      '<div style="font-size:21pt;font-weight:bold">'+s.pct+'%</div></td>'+
+    '<td width="33%" style="border:1px solid #d9d2c2;padding:12px">'+
+      '<div style="font-size:8.5pt;letter-spacing:2px;color:#666">MATURIDADE</div>'+
+      '<div style="font-size:21pt;font-weight:bold">'+s.mat+' / 5</div>'+
+      '<div style="font-size:8.5pt;color:#666">'+s.structDef+' deficiência(s) estrutural(is)</div></td>'+
+    '</tr></table>';
+
+  const exec = '<p style="font-size:11pt;line-height:1.5">'+
+    (s.anyFail?'Há domínios em <b>FAIL</b> — a evolução de capacidades ITOM avançadas está <b>bloqueada</b> até estabilização estrutural da CMDB.'
+     :(s.anyWarn?'O ambiente possui capacidade operacional mínima para continuidade controlada do Discovery, porém com riscos estruturais (<b>WARN</b>) que exigem contenção antes da expansão de capacidades avançadas.'
+     :'Todos os domínios em <b>PASS</b> — ambiente apto a evoluir.'))+'</p>';
+
+  /* Resultado consolidado */
+  let cons='<table cellspacing="0" cellpadding="7" style="border-collapse:collapse;width:100%;font-size:10pt;border:1px solid #c9c2b2">'+
+    '<tr><th align="left" style="background:#1c1b18;color:#fff;padding:7px 9px;font-size:8.5pt;letter-spacing:.5px;text-transform:uppercase">Domínio</th>'+
+    '<th style="background:#1c1b18;color:#fff;padding:7px 9px;font-size:8.5pt">Resultado</th>'+
+    '<th style="background:#1c1b18;color:#fff;padding:7px 9px;font-size:8.5pt">Criticidade</th>'+
+    '<th align="left" style="background:#1c1b18;color:#fff;padding:7px 9px;font-size:8.5pt;letter-spacing:.5px;text-transform:uppercase">Leitura Consolidada</th></tr>';
+  DOMAINS.forEach(d=>{ const st=m.status[d.key];
+    cons+='<tr><td style="padding:6px 9px;border:1px solid #d9d2c2;font-weight:bold">'+d.label+'</td>'+
+      '<td style="padding:6px 9px;border:1px solid #d9d2c2;text-align:center;font-weight:bold;color:'+stColor(st)+';background:'+stBg(st)+'">'+(st||'N/D')+'</td>'+
+      '<td style="padding:6px 9px;border:1px solid #d9d2c2;text-align:center">'+d.crit+'</td>'+
+      '<td style="padding:6px 9px;border:1px solid #d9d2c2">'+(st?READINGS[d.key][st]:'Não detectado')+'</td></tr>'; });
+  cons+='</table>';
+
+  /* Indicadores (métricas-chave) */
+  const ind=[]; const w=m.metrics.write, c=m.metrics.cred, ir=m.metrics.ire, rc=m.metrics.recon, h=m.metrics.health;
+  if(m.metrics.sensorsCount!=null) ind.push(['Sensors legados escrevendo direto', m.metrics.sensorsCount]);
+  if(w.pctManual!=null) ind.push(['Escrita manual / não governada', w.pctManual+'% ('+w.manual+' de '+w.total+' CIs)']);
+  if(w.tm!=null) ind.push(['Transform Maps direto em cmdb_ci', w.tm]);
+  if(w.intWrites!=null) ind.push(['CIs por contas de integração (Table API)', w.intWrites]);
+  if(c.total!=null) ind.push(['Credenciais (vivas / mortas / perigosas)', (c.alive||0)+' / '+(c.dead||0)+' / '+(c.dangerous||0)]);
+  if(ir.rules!=null) ind.push(['Regras IRE ativas / gaps em classes críticas', ir.rules+' / '+ir.without.length]);
+  if(rc.rules!=null) ind.push(['Reconciliation: regras / autoritativos / fontes', rc.rules+' / '+(rc.authoritative||0)+' / '+(rc.sources||0)]);
+  if(h.worst!=null) ind.push(['Health — pior dimensão', h.worst+'% ('+(h.worstDim||'')+')']);
+  else if(h.score!=null) ind.push(['Health — score médio', h.score+'%']);
+  if(h.stale!=null) ind.push(['CIs stale', h.stale]);
+  if(h.dup!=null) ind.push(['Duplicate tasks abertas', h.dup]);
+  if(h.orphans!=null) ind.push(['Servers órfãos (sem relacionamento)', h.orphans]);
+  if(h.generic!=null) ind.push(['CIs em classe genérica', h.generic]);
+  let indTbl='';
+  if(ind.length){
+    indTbl='<table cellspacing="0" cellpadding="7" style="border-collapse:collapse;width:100%;font-size:10pt;border:1px solid #c9c2b2">'+
+      '<tr><th align="left" style="background:#1c1b18;color:#fff;padding:7px 9px;font-size:8.5pt;text-transform:uppercase">Indicador</th>'+
+      '<th align="left" style="background:#1c1b18;color:#fff;padding:7px 9px;font-size:8.5pt">Valor</th></tr>';
+    ind.forEach(r=>{ indTbl+='<tr><td style="padding:6px 9px;border:1px solid #d9d2c2">'+r[0]+'</td><td style="padding:6px 9px;border:1px solid #d9d2c2;font-weight:bold">'+r[1]+'</td></tr>'; });
+    indTbl+='</table>';
+  }
+
+  const h2='font-size:13pt;color:#1c1b18;border-bottom:2px solid #b3431f;padding-bottom:3px;margin:22px 0 6px';
+  const concl = s.gate==='NO-GO'
+    ? 'Recomendação técnica: <b>não avançar</b> com novas capacidades. Estabilizar os domínios em FAIL antes de qualquer expansão.'
+    : 'Recomendação técnica: estabilizar governança de escrita na CMDB e identidade de serviços (IRE / Reconciliation / CSDM) antes da expansão de capacidades ITOM avançadas.';
+
+  return '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8">'+
+    '<style>@page{margin:2cm} body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#1c1b18}</style></head><body>'+
+    cover+kpi+exec+
+    '<h2 style="'+h2+'">Resultado Consolidado por Domínio</h2>'+cons+
+    (indTbl?'<h2 style="'+h2+'">Indicadores</h2>'+indTbl:'')+
+    '<h2 style="'+h2+'">Principais Riscos</h2>'+domTableToWord('riskTbl')+
+    '<h2 style="'+h2+'">Plano de Correção Priorizado</h2>'+domTableToWord('planTbl')+
+    '<h2 style="'+h2+'">Estimativa de Esforço</h2>'+domTableToWord('effortTbl')+
+    '<h2 style="'+h2+'">Conclusão</h2><p style="font-size:11pt;line-height:1.5">'+concl+'</p>'+
+    '<p style="font-size:8pt;color:#999;margin-top:18px">Nomes de credenciais omitidos por privacidade. Veredito derivado de critério determinístico (FAIL bloqueia · WARN contém · PASS segue).</p>'+
+    '</body></html>';
+}
+
+function downloadBlob(content, mime, fname){
+  const blob=new Blob(['\ufeff'+content],{type:mime});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=fname; document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},200);
+}
+
+function exportWord(){
+  if(!lastModel){ alert('Analise um output primeiro.'); return; }
+  downloadBlob(buildReportHTML(),'application/msword','Assessment_CMDB_'+nowStamp()+'.doc');
+}
+
+function exportExcel(){
+  if(!lastModel){ alert('Analise um output primeiro.'); return; }
+  const m=lastModel, s=lastModel._score;
+  // monta worksheets via MSO XML
+  function sheet(name, tableInner){ return '<x:ExcelWorksheet><x:Name>'+name+'</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet>'; }
+  // Tabelas (HTML) por aba
+  let resumo='<table border="1"><tr><td>Veredito</td><td>'+s.gate+'</td></tr><tr><td>Score ponderado</td><td>'+s.pct+'%</td></tr><tr><td>Maturidade</td><td>'+s.mat+'/5</td></tr><tr><td>Deficiências estruturais</td><td>'+s.structDef+'</td></tr><tr><td></td><td></td></tr>'+
+    '<tr><th>Domínio</th><th>Resultado</th><th>Criticidade</th><th>Peso</th><th>Leitura</th></tr>';
+  DOMAINS.forEach(d=>{const st=m.status[d.key];resumo+='<tr><td>'+d.label+'</td><td>'+(st||'N/D')+'</td><td>'+d.crit+'</td><td>'+d.weight+'</td><td>'+(st?READINGS[d.key][st]:'')+'</td></tr>';});
+  resumo+='</table>';
+
+  const c=m.metrics.cred;
+  let creds='<table border="1"><tr><th>Categoria</th><th>Qtd</th></tr><tr><td>Total ativas</td><td>'+(c.total||0)+'</td></tr><tr><td>Vivas</td><td>'+(c.alive||0)+'</td></tr><tr><td>Mortas</td><td>'+(c.dead||0)+'</td></tr><tr><td>Perigosas</td><td>'+(c.dangerous||0)+'</td></tr></table>'+
+    '<br><div>Nomes das credenciais omitidos por privacidade. Consultar no log do assessment.</div>';
+
+  let plano = tableHTML('planTbl').replace(/class="[^"]*"/g,'');
+  let esforco = tableHTML('effortTbl').replace(/contenteditable="true"/g,'').replace(/class="[^"]*"/g,'');
+
+  const wb =
+  '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8">'+
+  '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets>'+
+  sheet('Resumo')+sheet('Credenciais')+sheet('Plano')+sheet('Esforco')+
+  '</x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body>'+
+  '<div>'+resumo+'</div>'+
+  '<div style="page-break-before:always">'+creds+'</div>'+
+  '<div style="page-break-before:always">'+plano+'</div>'+
+  '<div style="page-break-before:always">'+esforco+'</div>'+
+  '</body></html>';
+  downloadBlob(wb,'application/vnd.ms-excel','Assessment_CMDB_'+nowStamp()+'.xls');
+}
+
+/* ============================================================
+   EXEMPLO — output sintético fiel às strings do framework
+   ============================================================ */
+function loadSample(){
+  const P='*** Script: [INFO] ', W='*** Script: [WARN] ', E='*** Script: [FAIL] ';
+  const L=[
+    P+'>>> DISCOVERY | PROBES (LEGADO)',
+    P+'FAIL bloqueia evolução | WARN permite evolução com contenção | PASS pode seguir',
+    P+'PASS: Nenhum Probe legado ativo.',
+    P+'>>> DISCOVERY | SENSORS (LEGADO)',
+    W+'WARN: Sensors ativos escrevendo direto no CMDB (250).',
+    P+'>>> CMDB | CONTROLE DE ESCRITA | FONTES & CARGA MANUAL',
+    P+'GOVERNED | Discovery = 18420',
+    W+'MANUAL | ServiceNow = 5130',
+    W+'MANUAL | (vazio) = 870',
+    P+'REVISAR FONTE | SCCM = 3200',
+    P+'CIs totais: 27620 | manuais: 6000 (22%) | fontes a revisar: 3200',
+    P+'Transform Maps ativos em cmdb_ci: 3',
+    W+'TM BYPASS? | Import CMVM -> cmdb_ci_vm_instance',
+    P+'CIs criados por contas de integração: 1120',
+    W+'Resultado: WARN - escrita fora do pipeline governado detectada',
+    P+'>>> DISCOVERY | SCHEDULES',
+    P+'PASS: Discovery Schedules ativos (6).',
+    P+'Execuções de Discovery nos últimos 7 dias: 41',
+    P+'>>> DISCOVERY | CREDENCIAIS | CLASSIFICAÇÃO',
+    P+'Credenciais ativas encontradas: 14',
+    P+'- Total ativas: 14',
+    P+'- Vivas: 9',
+    P+'- Mortas: 5',
+    P+'- Perigosas: 0',
+    P+'VIVA | SSH_LINUX_PROD',
+    P+'VIVA | WMI_WIN_PROD',
+    W+'MORTA | SNMP_LEGACY_CORE',
+    W+'MORTA | SSH_OLD_DMZ',
+    W+'MORTA | VMWARE_ESX_OLD',
+    W+'MORTA | JDBC_ORA_DEPREC',
+    W+'MORTA | SNMP_PRINTERS',
+    W+'Resultado: WARN – credenciais mortas detectadas',
+    P+'>>> CMDB | IRE | IDENTIDADE DE CI',
+    P+'IRE disponível.',
+    P+'Regras IRE ativas encontradas: 42',
+    P+'COM REGRA IRE | cmdb_ci_business_service',
+    W+'SEM REGRA IRE | cmdb_ci_application_service',
+    P+'Identifier entries com allow_null_attribute=true: 2',
+    W+'Resultado: WARN – classes críticas sem regra de identificação (1)',
+    P+'>>> CMDB | RECONCILIATION | PRECEDÊNCIA DE FONTES',
+    P+'Regras de reconciliation ativas: 12',
+    P+'Datasources autoritativos: 0',
+    P+'Fontes distintas escrevendo: 4',
+    W+'Resultado: WARN - múltiplas fontes sem datasource autoritativo definido',
+    P+'>>> CMDB | HEALTH | PROFUNDO (DIMENSÃO/STALE/DUP/ORPHAN)',
+    P+'DIMENSAO | completeness = 88%',
+    P+'DIMENSAO | correctness = 78%',
+    P+'DIMENSAO | compliance = 71%',
+    P+'Pior dimensão: compliance (71%)',
+    P+'STALE | cmdb_ci_server (>45d) = 240',
+    P+'STALE | cmdb_ci_database (>30d) = 60',
+    P+'CIs stale (total): 300',
+    P+'Duplicate tasks abertas (cmdb_duplicate_task): 47',
+    P+'cmdb_ci_server órfãos (sem relacionamento): 180',
+    W+'GENERICO | cmdb_ci_computer = 420',
+    P+'CIs em classe genérica (total): 420',
+    W+'Resultado: WARN - stale/dup/orphan/genérico ou dimensão < 85%',
+    P+'>>> CMDB | CSDM | MODELO E USO REAL',
+    P+'MODELO OK | Business Service',
+    P+'EM USO | Business Service',
+    P+'MODELO OK | Application Service',
+    W+'SEM REGISTROS | Application Service',
+    W+'USO GENÉRICO DETECTADO | cmdb_ci_service pode estar substituindo classes CSDM',
+    W+'Resultado: WARN – adoção parcial ou inexistente do CSDM',
+    P+'>>> PLANO DE CORREÇÃO | PRIORIZADO',
+    W+'PRIORIDADE 1: [SENSORS/WARN] Racionalizar/desativar sensors legados; rotear escrita pelo IRE',
+    W+'PRIORIDADE 1: [WRITECONTROL/WARN] Bloquear carga manual/bypass; rotear toda escrita via IRE',
+    W+'PRIORIDADE 1: [IRE/WARN] Criar regras de identificação para classes críticas',
+    W+'PRIORIDADE 1: [RECONCILIATION/WARN] Definir precedência/datasource autoritativo',
+    W+'PRIORIDADE 1: [HEALTH/WARN] Remediar pior dimensão + stale/dup/orphan; baseline de qualidade',
+    W+'PRIORIDADE 1: [CSDM/WARN] Eliminar uso genérico; alinhar classes ao CSDM',
+    W+'PRIORIDADE 2: [CREDENTIALS/WARN] Higienizar credenciais mortas/perigosas; rastreabilidade',
+    P+'>>> VEREDITO FINAL',
+    P+'PROBES = PASS',
+    P+'SENSORS = WARN',
+    P+'WRITECONTROL = WARN',
+    P+'SCHEDULES = PASS',
+    P+'CREDENTIALS = WARN',
+    P+'IRE = WARN',
+    P+'RECONCILIATION = WARN',
+    P+'HEALTH = WARN',
+    P+'CSDM = WARN',
+  ].join('\n');
+  document.getElementById('inA').value=L;
+  run();
+}
+</script>
+</body>
+</html>
