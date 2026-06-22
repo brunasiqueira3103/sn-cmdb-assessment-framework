@@ -56,7 +56,7 @@ CMDBBaselineDiagnostic.prototype = {
      - Footer de execução no fim do arquivo: new CMDBBaselineDiagnostic().runAll();
      EXECUTAR em escopo GLOBAL.
 
-     v5 — correções a partir do log real (gruponcdev):
+    correções a partir do log real (gruponcdev):
      - Removido o gs.print mirror do v4: o runner moderno (sys.scripts.modern.do) JÁ ecoa
        gs.info/warn/error no painel -> mirror duplicava 100% da saída. Agora 1 linha por evento.
      - Health: probe AUTO-DESCOBERTO de tabela/campo (cmdb_health_score [Xanadu+] /
@@ -64,7 +64,7 @@ CMDBBaselineDiagnostic.prototype = {
        Dashboard Jobs desativados/nunca executados) e SCHEMA DUMP de campos numéricos para
        travar o nome de campo por instância. Corrige o "dimensão NÃO medida".
 
-     v6 — auditoria completa de fidelidade do veredito (corrige falso-WARN/falso-FAIL):
+     auditoria completa de fidelidade do veredito (corrige falso-WARN/falso-FAIL):
      - CSDM: classes corrigidas. cmdb_ci_business_service/cmdb_ci_application_service NÃO existem OOB
        (geravam "MODELO AUSENTE" eterno). Reais: cmdb_ci_business_app, cmdb_ci_service_discovered/
        _auto/_by_tags; genérico medido no base cmdb_ci_service. Detecta existência+uso real.
