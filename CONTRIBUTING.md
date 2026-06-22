@@ -92,7 +92,7 @@ Você pode adicionar co-maintainers no futuro.
 
 ## Dúvidas ou Sugestões?
 
-- Abra uma **[Issue](https://github.com/brunasiqueira/servicenow-cmdb-baseline-diagnostic/issues)** antes de começar a trabalhar em algo grande.
+- Abra uma **[Issue](https://github.com/brunasiqueira3103/servicenow-cmdb-baseline-diagnostic/issues)** antes de começar a trabalhar em algo grande.
 - Participe das discussões existentes.
 
 ---
