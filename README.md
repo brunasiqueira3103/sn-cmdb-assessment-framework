@@ -19,7 +19,7 @@
 
 ### 📋 Como usar (Rápido)
 
-1. Execute o script `CMDBBaselineDiagnostic_v4.js` em **Scripts - Background** (escopo Global + SNutils)
+1. Execute o script `CMDBBaselineDiagnostic_v6.js` em **Scripts - Background** (escopo Global + SNutils)
 2. Copie todo o output
 3. Abra o `cmdb_assessment_console_v2.html` no navegador
 4. Cole e clique em **Analisar**
