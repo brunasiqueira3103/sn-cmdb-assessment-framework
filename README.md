@@ -38,7 +38,7 @@
 
 ### 📖 Documentação
 
-- [Apresentação para Stakeholdes](./docs/apresentacao/)
+- **Apresentação stakeholdes** [⬇️ Baixar pptx](./docs/apresentacao.pptx/)
 - **Guia do Administrador** — [📖 Ler online](./docs/guia-do-administrador.md) · [⬇️ Baixar Word](./docs/CMDB_Baseline_Diagnostic_Guia_do_Administrador.docx)
 - **TDD (Desenho Técnico)** — [📖 Ler online](./docs/tdd-template.md) · [⬇️ Baixar Word](./docs/TDD_Baseline_CMDB.docx)
 
