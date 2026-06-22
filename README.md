@@ -52,5 +52,5 @@ Quer ajudar a melhorar o projeto? Veja nosso [CONTRIBUTING.md](./CONTRIBUTING.md
 
 ### 📋 Infográfico
 
-(![Infográfico](cmdb_assessment_infografico.png))
+<img width="4515" height="7037" alt="cmdb_assessment_infografico" src="https://github.com/user-attachments/assets/4703a536-bbee-4510-b286-b98b853d83a2" />
 
