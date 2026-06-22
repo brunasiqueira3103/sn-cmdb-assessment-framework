@@ -2,7 +2,7 @@
 
 **Framework completo de avaliação da maturidade e qualidade da CMDB** — com veredito GO/NO-GO claro para evolução de capacidades ITOM.
 
-![Version](https://img.shields.io/badge/version-4.x-blue)
+![Version](https://img.shields.io/badge/version-6.x-blue)
 ![ServiceNow](https://img.shields.io/badge/ServiceNow-Quebec%2B-brightgreen)
 
 ### ✨ Funcionalidades
