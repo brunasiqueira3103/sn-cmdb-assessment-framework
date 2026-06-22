@@ -16,7 +16,7 @@ A entrega é composta por dois componentes que trabalham em conjunto:
 
 | Componente | Função |
 |---|---|
-| `CMDBBaselineDiagnostic_v4.js` | Script de diagnóstico. É colado e executado em **Scripts – Background** (escopo Global) na instância ServiceNow. Lê dados de configuração e qualidade do CMDB e imprime um log estruturado com o resultado de cada domínio avaliado. |
+| `CMDBBaselineDiagnostic_v6.js` | Script de diagnóstico. É colado e executado em **Scripts – Background** (escopo Global) na instância ServiceNow. Lê dados de configuração e qualidade do CMDB e imprime um log estruturado com o resultado de cada domínio avaliado. |
 | `cmdb_assessment_console_v2.html` | Console de análise (app). Arquivo único HTML, **100% offline**, aberto em qualquer navegador. Recebe o log do script colado pelo usuário, interpreta o conteúdo e apresenta veredito, score, maturidade, riscos, plano de correção e evidências. Exporta relatório em PDF, Word e Excel. |
 
 **Fluxo de uso:** (1) executar o script na instância → (2) copiar o output do painel do Background Script → (3) colar o output no console HTML e clicar **Analisar** → (4) interpretar/exportar o resultado.
@@ -38,7 +38,7 @@ A entrega é composta por dois componentes que trabalham em conjunto:
 
 1. Acesse **System Definition > Scripts – Background** com perfil admin.
 2. Selecione o escopo **Global**.
-3. Cole o conteúdo integral do arquivo `CMDBBaselineDiagnostic_v4.js`. O arquivo é auto-executável (a última linha instancia e roda o diagnóstico).
+3. Cole o conteúdo integral do arquivo `CMDBBaselineDiagnostic_v6.js`. O arquivo é auto-executável (a última linha instancia e roda o diagnóstico).
 4. Execute. O runner moderno ecoa cada linha do log no painel com o prefixo `*** Script:`.
 5. Selecione e copie todo o output do painel.
 6. Abra `cmdb_assessment_console_v2.html` no navegador, cole o output no campo **Execução base** e clique **Analisar**.
